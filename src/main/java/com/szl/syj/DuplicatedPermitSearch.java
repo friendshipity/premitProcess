@@ -202,28 +202,34 @@ public class DuplicatedPermitSearch {
                         }
                         for (String rawId : sig4rawIdLimit.get(sig)) {
                             sig4rawIdLimitLimit.put(sig, rawId);
-                            File dir = new File("res1/" + sig);
-                            if (!dir.exists()) {
-                                dir.mkdir();
-                            }
-                            int fileIndex = Integer.valueOf(rawId.split(",")[1]);
-                            int fileId = Integer.valueOf(rawId.split(",")[0]);
-                            String fileIndexStr = null;
-                            fileIndexStr = String.valueOf(fileIndex);
 
 
-                            String TargetBase64 = TextUtils.loadList("D:\\data\\img_certMD5_base64_" + fileIndexStr + ".csv").get(fileId);
-//                            write file
 
-                            byte[] binary = null;
-                            binary = ImageUtils.base64String2ByteFun(TargetBase64);
-                            BufferedImage bi = ImageUtils.bytes2ImageBuffer(binary);
-                            try {
-//                    ImageIO.write(bi, "jpg", new File("pic/0"+String.valueOf(i)+"/" + String.valueOf(counter++) + ".jpg"));
-                                ImageIO.write(bi, "jpg", new File("res1/" + sig + "/" + rawId + "--" + rawId2Sid.get(rawId) + ".jpg"));
-                            } catch (Exception e) {
-                                e.printStackTrace();
-                            }
+//
+//                            ////////////////////////
+//                            File dir = new File("res1/" + sig);
+//                            if (!dir.exists()) {
+//                                dir.mkdir();
+//                            }
+//                            int fileIndex = Integer.valueOf(rawId.split(",")[1]);
+//                            int fileId = Integer.valueOf(rawId.split(",")[0]);
+//                            String fileIndexStr = null;
+//                            fileIndexStr = String.valueOf(fileIndex);
+//
+//
+//                            String TargetBase64 = TextUtils.loadList("D:\\data\\img_certMD5_base64_" + fileIndexStr + ".csv").get(fileId);
+////                            write file
+//
+//                            byte[] binary = null;
+//                            binary = ImageUtils.base64String2ByteFun(TargetBase64);
+//                            BufferedImage bi = ImageUtils.bytes2ImageBuffer(binary);
+//                            try {
+////                    ImageIO.write(bi, "jpg", new File("pic/0"+String.valueOf(i)+"/" + String.valueOf(counter++) + ".jpg"));
+//                                ImageIO.write(bi, "jpg", new File("res1/" + sig + "/" + rawId + "--" + rawId2Sid.get(rawId) + ".jpg"));
+//                            } catch (Exception e) {
+//                                e.printStackTrace();
+//                            }//
+                            /////////////
                         }
                     }
                 }

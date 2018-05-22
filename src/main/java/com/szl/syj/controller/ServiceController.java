@@ -1236,16 +1236,18 @@ public class ServiceController {
     }
 
     @RequestMapping("/DuplicatedPermitSearch/{month}")
-    public JSONObject DPSR(@PathVariable("month") int month) {
+    public String DPSR(@PathVariable("month") int month) {
         System.out.println("month=" + month);
         JSONObject res = new JSONObject();
+        String flag = "0";
         duplicatedPermitSearchRemote.init(month);
         try{
             res =duplicatedPermitSearchRemote.dpsr();
         }catch (Exception e){
             res.put("err","1");
             e.printStackTrace();
+            flag="1";
         }
-        return res;
+        return flag;
     }
 }

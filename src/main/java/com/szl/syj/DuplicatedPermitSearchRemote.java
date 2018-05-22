@@ -121,7 +121,7 @@ public class DuplicatedPermitSearchRemote {
     public static void close() throws SQLException {
         conn.close();
     }
-
+    private int month ;
     DuplicatedPermitSearchRemote() {
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         Logger rootLogger = loggerContext.getLogger("org.mongodb.driver");
@@ -136,6 +136,7 @@ public class DuplicatedPermitSearchRemote {
     }
 
     public void init(int month) {
+        this.month = month;
         try {
             tgResMap = getTgResMap(month);
             wmResMap = getWmResMap(month);
@@ -154,8 +155,8 @@ public class DuplicatedPermitSearchRemote {
         Multimap<String, String> resMap = ArrayListMultimap.create();
         Map<String, String> map = new HashMap<>();
         int counter = 0;
-        for (String sid : new ArrayList<String>(tgResMap.keySet())) {
-//        for (String sid : new ArrayList<String>(tgResMap.keySet()).subList(1,151)) {//test
+//        for (String sid : new ArrayList<String>(tgResMap.keySet())) {
+        for (String sid : new ArrayList<String>(tgResMap.keySet()).subList(1,151)) {//test
             for (String md5 : tgResMap.get(sid)) {
                 map = operator.getPic("certificate_cache", md5);
                 resMap.put(sid, map.get("base64"));
@@ -379,7 +380,7 @@ public class DuplicatedPermitSearchRemote {
         this.setTgResMap(null);
         JSONArray jsaRes1 = new JSONArray();
         Connection connection = getWriteConnection();
-        jsaRes1 =printOut(sig2sids,"tg",connection);
+        jsaRes1 =printOut(sig2sids,"tg",connection,this.month);
         connection.close();
 
         sig2sids=ArrayListMultimap.create();
@@ -394,10 +395,6 @@ public class DuplicatedPermitSearchRemote {
         RestTemplate restTemplate3 = new RestTemplate();
         System.out.println("base64 get signiture started");
         for (Triple[] base64sBucket : signitruesBuckets) {
-//            String url = "http://172.27.2.100:8081/getSignatureBatch";
-//            String url = "http://172.27.2.100:8083/getSignatureBatch";
-            String url = "http://172.27.2.141:8083/getSignatureBatch";
-
             List<Triple> pairs = new ArrayList<>();
             for (Triple pair : base64sBucket) {
                 pairs.add(pair);
@@ -419,7 +416,7 @@ public class DuplicatedPermitSearchRemote {
                     boolean dup = false;
                     sig2sids.put(sig, oid);
                     batchCounter++;
-                    if (batchCounter % 1 == 0) {
+                    if (batchCounter % 1000 == 0) {
                         System.out.println((double) batchCounter / (double) signitruesBuckets.size() * 100 + "%");
                     }
                 }
@@ -431,7 +428,7 @@ public class DuplicatedPermitSearchRemote {
 
         JSONArray jsaRes2 = new JSONArray();
         Connection connection1 = getWriteConnection();
-        jsaRes2 =  printOut(sig2sids,"wm",connection1);
+        jsaRes2 =  printOut(sig2sids,"wm",connection1,this.month);
         connection1.close();
 
         sig2sids.clear();
@@ -445,16 +442,17 @@ public class DuplicatedPermitSearchRemote {
         return jsonObject;
 
     }
-    public JSONArray printOut(Multimap<String, String> sig2sids,String type,Connection connection){
+    public JSONArray printOut(Multimap<String, String> sig2sids,String type,Connection connection,int month){
         JSONArray jsaRes = new JSONArray();
         Multimap<String, String> sig2sidsLimit = ArrayListMultimap.create();
         for (String sig : sig2sids.keySet()) {
-            if (sig2sids.get(sig).size() > 1) {
+            if (sig2sids.get(sig).size() > 1 && sig2sids.get(sig).size()<100) {
                 if (!sig.equals("锦江区幸福人家农家乐卢勇热食类食品制售nullJY25101040047197")) {
                     Multimap<String, String> bags = ArrayListMultimap.create();
-                    for (String sid : sig2sidsLimit.get(sig)) {
+                    for (String sid : sig2sids.get(sig)) {
                         sig2sidsLimit.put(sig, sid);
                         bags.put(sid.substring(0, 1), sid);
+//                        bags.put(sid.substring(0, 2), sid);
                     }
                     JSONObject jso = new JSONObject();
                     jso.put("signitrue", sig);
@@ -465,19 +463,23 @@ public class DuplicatedPermitSearchRemote {
                             String code = sig.split("null")[1];
                             for (String sid : bags.get(word)) {
                                 try {
-                                    updateDPS(sid, code, type, connection);
+                                    updateDPS(sid, code, type, connection,month);
                                 }catch (SQLException e){
                                     System.err.println(sid +" update fail at "+type);
+                                    e.printStackTrace();
                                 }
                             }
                             //print out
                             JSONArray jsa = new JSONArray();
+                            System.out.println(sig);
                             for (String sid : bags.get(word)) {
+                                System.out.println(sid);
                                 JSONObject jsoless = new JSONObject();
                                 jsoless.put("duplicated_permit_shop", sid);
                                 jsa.add(jsoless);
                             }
                             jso.put("shops", jsa);
+
                         }
                     }
                     jsaRes.add(jso);
@@ -489,9 +491,9 @@ public class DuplicatedPermitSearchRemote {
 
 
 
-    public void updateDPS(String sid,String code,String type,Connection connection)  throws SQLException{
-        String sql = String.format("UPDATE "+"analysis_"+type+"_shop"+" set"+" duplicate_permit='%s',permit_code ='%s' where sid = "+sid,
-                "1",
+    public void updateDPS(String sid,String code,String type,Connection connection,int month)  throws SQLException{
+        String sql = String.format("UPDATE "+"analysis_"+type+"_shop"+" set"+" duplicate_premit=1,premit_code ='%s' where sid = "+sid+
+                " and month = "+month,
                 code);
         PreparedStatement pst2 = connection.prepareStatement(sql);
         pst2.execute();
