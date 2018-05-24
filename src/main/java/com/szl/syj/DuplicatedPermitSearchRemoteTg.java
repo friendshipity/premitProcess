@@ -15,8 +15,6 @@ import com.szl.syj.mongo.MongoOperator;
 import com.szl.syj.utils.Triple;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.ParameterizedTypeReference;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
 import org.springframework.util.LinkedMultiValueMap;
 import org.springframework.util.MultiValueMap;
@@ -32,7 +30,7 @@ import java.util.concurrent.*;
  * Created by Administrator on 2018/5/15.
  */
 @Component
-public class DuplicatedPermitSearchRemote {
+public class DuplicatedPermitSearchRemoteTg {
     static private Connection conn = null;
     @Autowired
     private MongoOperator operator;
@@ -123,7 +121,7 @@ public class DuplicatedPermitSearchRemote {
         conn.close();
     }
     private int month ;
-    DuplicatedPermitSearchRemote() {
+    DuplicatedPermitSearchRemoteTg() {
         LoggerContext loggerContext = (LoggerContext) LoggerFactory.getILoggerFactory();
         Logger rootLogger = loggerContext.getLogger("org.mongodb.driver");
         rootLogger.setLevel(Level.OFF);
@@ -140,7 +138,6 @@ public class DuplicatedPermitSearchRemote {
         this.month = month;
         try {
             tgResMap = getTgResMap(month);
-            wmResMap = getWmResMap(month);
             //test
         } catch (FileNotFoundException e1) {
             e1.printStackTrace();
@@ -149,7 +146,6 @@ public class DuplicatedPermitSearchRemote {
         }
         System.out.println("init data fetched");
         System.out.println("tg " + tgResMap.size());
-        System.out.println("wm " + wmResMap.size());
     }
 
     public Multimap<String, String> getBase64(Multimap<String, String> tgResMap) {
@@ -174,7 +170,7 @@ public class DuplicatedPermitSearchRemote {
     public static Multimap<String, String> getTgResMap(int month) throws FileNotFoundException, SQLException {
         Multimap<String, String> wmResMap = ArrayListMultimap.create();
         String sql = "select sid,md5_code from tg_shop_certificate_" + String.valueOf(month);
-        PreparedStatement pst = DuplicatedPermitSearchRemote.getConnection().prepareStatement(sql);
+        PreparedStatement pst = DuplicatedPermitSearchRemoteTg.getConnection().prepareStatement(sql);
         ResultSet rs1 = pst.executeQuery();
         while (rs1.next()) {
             String sid = rs1.getString(1);
@@ -184,21 +180,6 @@ public class DuplicatedPermitSearchRemote {
             }
         }
         return wmResMap;
-    }
-
-    public static Multimap<String, String> getWmResMap(int month) throws FileNotFoundException, SQLException {
-        Multimap<String, String> tgResMap = ArrayListMultimap.create();
-        String sql = "select sid,md5_code from wm_shop_certificate_" + String.valueOf(month);
-        PreparedStatement pst = DuplicatedPermitSearchRemote.getConnection().prepareStatement(sql);
-        ResultSet rs = pst.executeQuery();
-        while (rs.next()) {
-            String sid = rs.getString(1);
-            if (sid != null) {
-                String md5 = rs.getString(2);
-                tgResMap.put(sid, md5);
-            }
-        }
-        return tgResMap;
     }
 
 
@@ -323,12 +304,7 @@ public class DuplicatedPermitSearchRemote {
 
             results.add(sigNature + "|" + oid + "|" + clasz);
         }
-//        JSONArray jsa  =new JSONArray();
-//        for(int j=0;j<results.size();j++){
-//            JSONObject jsonObject = new JSONObject();
-//            jsonObject.put("sig",results.get(j));
-//            jsa.add(jsonObject);
-//        }
+
 
         return results;
 
@@ -382,66 +358,11 @@ public class DuplicatedPermitSearchRemote {
         JSONArray jsaRes1 = new JSONArray();
         Connection connection = getWriteConnection();
         jsaRes1 =printOut(sig2sids,"tg",connection,this.month);
-//        connection.close();
-
-        sig2sids=ArrayListMultimap.create();
-        Date now1 =new Date();
-        System.out.println("tg dpsr completed at"+ now1);
-        System.out.println("=================================");
-        Multimap<String, String> wmBase64s = this.getBase64(this.getWmResMap());
-
-        //get signitrues
-        System.out.println("wm buckets size" + wmBase64s.size());
-        signitruesBuckets = this.bucketingClassifying(wmBase64s);
-
-
-        System.out.println("base64 get signiture started");
-        for (Triple[] base64sBucket : signitruesBuckets) {
-            List<Triple> pairs = new ArrayList<>();
-            for (Triple pair : base64sBucket) {
-                pairs.add(pair);
-            }
-
-            List<String> sigs = null;
-            try {
-                sigs = getSigBatch(pairs);
-            } catch (Exception e) {
-                System.err.println("sig err!");
-            }
-            if (sigs != null)
-                for (Object sigl : sigs) {
-
-                    String sigo = (String) sigl;
-                    String sig = sigo.split("\\|")[0];
-                    String oid = sigo.split("\\|")[1];
-                    String clasz = sigo.split("\\|")[2];
-                    boolean dup = false;
-                    sig2sids.put(sig, oid);
-                    batchCounter++;
-                    if (batchCounter % 1000 == 0) {
-                        System.out.println((double) batchCounter / (double) signitruesBuckets.size() * 100 + "%");
-                    }
-                }
-        }
-        signitruesBuckets = null;
-        wmBase64s = null;
-        this.setWmResMap(null);
-        Date now2 =new Date();
-        System.out.println("wm dpsr completed at"+ now2);
-
-        JSONArray jsaRes2 = new JSONArray();
-        Connection connection1 = getWriteConnection();
-        jsaRes2 =  printOut(sig2sids,"wm",connection1,this.month);
-        connection1.close();
-
-        sig2sids.clear();
-
-
+        connection.close();
         JSONObject jsonObject = new JSONObject();
         jsonObject.put("result1", jsaRes1);
-        jsonObject.put("result2", jsaRes2);
         Date now =new Date();
-        System.out.println("dprs mission completed at"+ now);
+        System.out.println("tg dprs mission completed at"+ now);
         System.out.println(jsonObject.toString());
         return jsonObject;
 
@@ -508,7 +429,7 @@ public class DuplicatedPermitSearchRemote {
 
 
     public static void main(String[] arg) throws Exception {
-        DuplicatedPermitSearchRemote dpsRemote = new DuplicatedPermitSearchRemote();
+        DuplicatedPermitSearchRemoteTg dpsRemote = new DuplicatedPermitSearchRemoteTg();
         dpsRemote.init(5);
         dpsRemote.dpsr();
     }
