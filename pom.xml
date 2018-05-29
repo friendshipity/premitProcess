@@ -44,6 +44,18 @@
             <artifactId>commons-math3</artifactId>
             <version>3.6.1</version>
         </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpcore -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpcore</artifactId>
+            <version>4.4.7</version>
+        </dependency>
+        <!-- https://mvnrepository.com/artifact/org.apache.httpcomponents/httpclient -->
+        <dependency>
+            <groupId>org.apache.httpcomponents</groupId>
+            <artifactId>httpclient</artifactId>
+            <version>4.5.1</version>
+        </dependency>
 
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -179,8 +191,8 @@
                             <jvmSettings>
                                 <extraArguments>
                                     <extraArgument>-server</extraArgument>
-                                    <extraArgument>-Xms8G</extraArgument>
-                                    <extraArgument>-Xmx12G</extraArgument>
+                                    <extraArgument>-Xms20G</extraArgument>
+                                    <extraArgument>-Xmx20G</extraArgument>
                                 </extraArguments>
                             </jvmSettings>
                         </program>

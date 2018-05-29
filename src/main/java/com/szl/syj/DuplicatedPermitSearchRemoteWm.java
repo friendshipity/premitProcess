@@ -100,20 +100,22 @@ public class DuplicatedPermitSearchRemoteWm {
     private Multimap<String, String> sid2RawId;
     private HashMap<String, String> index2Sid;
     private HashMap<String, String> rawId2Sid;
+    Multimap<String, String> sig2sids;
+
 
     public static Connection getConnection() throws FileNotFoundException, SQLException {
-        if (conn == null) {
+//        if (conn == null) {
             String driver = "com.mysql.cj.jdbc.Driver";
             conn = DriverManager.getConnection("jdbc:mysql://172.27.9.141/syj_netfood?serverTimezone=UTC", "syj", "syj123.");
-        }
+//        }
         return conn;
     }
 
     public static Connection getWriteConnection() throws FileNotFoundException, SQLException {
-        if (conn == null) {
+//        if (conn == null) {
             String driver = "com.mysql.cj.jdbc.Driver";
             conn = DriverManager.getConnection("jdbc:mysql://172.27.9.141/syj_netfood?serverTimezone=UTC", "syj", "syj123.");
-        }
+//        }
         return conn;
     }
 
@@ -130,6 +132,8 @@ public class DuplicatedPermitSearchRemoteWm {
         MD5toIndex = HashBiMap.create();
         sid2Index = ArrayListMultimap.create();
         sid2RawId = ArrayListMultimap.create();
+        sig2sids = ArrayListMultimap.create();
+
         index2Sid = new HashMap<>();
         rawId2Sid = new HashMap<>();
     }
@@ -144,22 +148,31 @@ public class DuplicatedPermitSearchRemoteWm {
         } catch (SQLException e2) {
             e2.printStackTrace();
         }
-        System.out.println("init data fetched");
-        System.out.println("wm " + wmResMap.size());
+        System.out.println("data refetched");
+        System.out.println("wm sid size" + wmResMap.size());
+        System.out.println("wm md5 size" + wmResMap.keySet().size());
+
     }
 
-    public Multimap<String, String> getBase64(Multimap<String, String> tgResMap) {
+    public Multimap<String, String> getBase64(List<String> seckeys) {
         Multimap<String, String> resMap = ArrayListMultimap.create();
         Map<String, String> map = new HashMap<>();
         int counter = 0;
-        for (String sid : new ArrayList<String>(tgResMap.keySet())) {
+//        for (String sid : new ArrayList<String>(this.tgResMap.keySet())) {
+
+        this.init(month);
+        for (String sid : seckeys) {
 //        for (String sid : new ArrayList<String>(tgResMap.keySet()).subList(1,151)) {//test
-            for (String md5 : tgResMap.get(sid)) {
-                map = operator.getPic("certificate_cache", md5);
-                resMap.put(sid, map.get("base64"));
+            for (String md5 : wmResMap.get(sid)) {
+                try {
+                    map = operator.getPic("certificate_cache", md5);
+                    resMap.put(sid, map.get("base64"));
+                }catch (NullPointerException e){
+                    System.err.println(sid +"No md5s");
+                }
             }
             if (counter % 1000 == 0) {
-                System.out.println((double) counter / (double) tgResMap.size() * 100 + "%");
+                System.out.println((double) counter / (double) seckeys.size() * 100 + "%");
             }
             counter++;
         }
@@ -310,18 +323,55 @@ public class DuplicatedPermitSearchRemoteWm {
         return results;
 
     }
+    public JSONObject start() throws Exception{
+        int size= wmResMap.keySet().size();
+        int partNum=5000;
+        int sec = size/partNum;
+        int sec_ = size%partNum;
+        Multimap<String,String> wmResMap = getWmResMap();
+        for(int i=0;i<sec;i++){
+            List<String> secMapKeys = new ArrayList<>();
+            if(i!=sec-1){
+                for(int j=partNum*(i);j<(i+1)*partNum;j++){
+                    try {
+                        secMapKeys.add(new ArrayList<>(wmResMap.keySet()).get(j));
+                    }catch (Exception e){
+                        System.out.println(j);
+                        System.out.println(i);
 
-    public JSONObject dpsr() throws Exception {
-        String month = "4";
+                    }
+                }
+            }
+            else {
+                for(int j=partNum*(i);j<i*partNum+sec_;j++){
+                    try {
+                    secMapKeys.add(new ArrayList<>(wmResMap.keySet()).get(j));
+                    }catch (Exception e){
+                        System.out.println(j);
+                        System.out.println(i);
+                        System.out.println(sec_);
+
+                    }
+                }
+            }
+            System.out.println("sec"+(i+1)+"/"+(sec+1)+" start");
+            System.out.println("sec"+"size:"+size);
+            this.dpsr(secMapKeys,(i+1));
+            //
+            System.currentTimeMillis();
+        }
+        return results();
+    }
+    public void dpsr(List<String> keys,int sec)  {
+
         System.setProperty("DEBUG.MONGO", "false");
 
-        Multimap<String, String> sig2sids = ArrayListMultimap.create();
         int batchCounter = 0;
 
-        Multimap<String, String> wmBase64s = this.getBase64(this.getWmResMap());
+        Multimap<String, String> wmBase64s = this.getBase64(keys);
         List<Triple<String, String, String>[]> signitruesBuckets = this.bucketingClassifying(wmBase64s);
         //get signitrues
-        System.out.println("wm buckets size" + wmBase64s.size());
+        System.out.println("wm buckets size" + signitruesBuckets.size());
 
         System.out.println("base64 get signiture started");
         for (Triple[] base64sBucket : signitruesBuckets) {
@@ -342,7 +392,7 @@ public class DuplicatedPermitSearchRemoteWm {
                     String sigo = (String) sigl;
                     String sig = sigo.split("\\|")[0];
                     String oid = sigo.split("\\|")[1];
-                    String clasz = sigo.split("\\|")[2];
+//                    String clasz = sigo.split("\\|")[2];
                     boolean dup = false;
                     sig2sids.put(sig, oid);
                     batchCounter++;
@@ -354,14 +404,16 @@ public class DuplicatedPermitSearchRemoteWm {
         signitruesBuckets = null;
         wmBase64s = null;
         this.setWmResMap(null);
-        Date now2 =new Date();
-        System.out.println("wm dpsr completed at"+ now2);
+        Date now2 = new Date();
+        System.out.println("wm dpsr completed at" + now2+" "+sec);
 
+    }
+    public JSONObject results()throws Exception{
         JSONArray jsaRes2 = new JSONArray();
-        Connection connection1 = getWriteConnection();
-        jsaRes2 =  printOut(sig2sids,"wm",connection1,this.month);
-        connection1.close();
 
+        jsaRes2 =  printOut(sig2sids,"wm",getWriteConnection(),this.month);
+//        connection1.close();
+        close();
         sig2sids.clear();
 
 
@@ -437,6 +489,6 @@ public class DuplicatedPermitSearchRemoteWm {
     public static void main(String[] arg) throws Exception {
         DuplicatedPermitSearchRemoteWm dpsRemote = new DuplicatedPermitSearchRemoteWm();
         dpsRemote.init(5);
-        dpsRemote.dpsr();
+//        dpsRemote.dpsr();
     }
 }

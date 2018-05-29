@@ -2,10 +2,13 @@ package com.szl.syj.integrated;
 
 import com.baidu.aip.ocr.AipOcr;
 
+import com.szl.syj.utils.ImageUtils;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -69,6 +72,21 @@ public class test {
         }
         return array;
     }
+    public static JSONObject basicGeneral(byte[] imagesbinaries, AipOcr client) {
+
+        JSONArray array = new JSONArray();
+            HashMap<String, String> options = new HashMap<String, String>();
+            options.put("language_type", "CHN_ENG");
+            options.put("detect_direction", "true");
+            options.put("probability", "false");
+
+
+            JSONObject res = client.basicGeneral(imagesbinaries, options);
+
+
+
+        return res;
+    }
 
     public static JSONArray basicGeneral2(List<String> images, AipOcr client) {
         List<String> reses = new ArrayList<>();
@@ -90,7 +108,38 @@ public class test {
 
 
 
+    public JSONObject test(String path){
+        AipOcr client = new AipOcr(APP_ID, API_KEY, SECRET_KEY);
+//
+        client.setConnectionTimeoutInMillis(2000);
+        client.setSocketTimeoutInMillis(60000);
+        byte[] imageBinary = ImageUtils.getImageBinary(path);
+//
+        JSONObject res = null;
+        try{
+            res=basicGeneral(imageBinary, client);
+        }catch (Exception e){}
+        return res;
+    }
+    public List<String> test1(String path){
+        List<String> out = new ArrayList<>();
+        AipOcr client = new AipOcr(APP_ID, API_KEY, SECRET_KEY);
+//
+        client.setConnectionTimeoutInMillis(2000);
+        client.setSocketTimeoutInMillis(60000);
+        byte[] imageBinary = ImageUtils.getImageBinary(path);
+//
+        JSONObject res = null;
+        try{
+            res=basicGeneral(imageBinary, client);
+        }catch (Exception e){}
 
+        JSONArray jsa = (JSONArray) res.get("words_result");
+        for(Object o :jsa){
+            out.add(((JSONObject)o).get("words").toString());
+        }
+        return out;
+    }
     public static void main(String[] args) {
 
 //
@@ -131,13 +180,15 @@ public class test {
 //
 //
 //
-//        AipOcr client = new AipOcr(APP_ID, API_KEY, SECRET_KEY);
+        String path = "pic/00/3.jpg";
+        test test1 = new test();
+//        OCRDemoForHttp test2 = new OCRDemoForHttp();
 //
-//        client.setConnectionTimeoutInMillis(2000);
-//        client.setSocketTimeoutInMillis(60000);
-//
-//
-//        JSONArray res = basicGeneral(imagesbinaries, client);
+//        try {
+//            System.out.println("youdao\n"+test2.test(path));
+//        }catch (Exception e){}
+
+        System.out.println("baidu\n"+test1.test1(path));
 //        int index =0;
 //        List<String> ress = new ArrayList<>();
 //        for(Object re:res){

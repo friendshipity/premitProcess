@@ -3,6 +3,8 @@ package com.szl.syj.controller;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.szl.syj.DuplicatedPermitSearchRemote;
+import com.szl.syj.DuplicatedPermitSearchRemoteTg;
+import com.szl.syj.DuplicatedPermitSearchRemoteWm;
 import com.szl.syj.integrated.RuleOCR6__;
 import com.szl.syj.integrated.SinglePicProcess;
 import com.szl.syj.utils.*;
@@ -30,7 +32,9 @@ public class ServiceController {
     @Autowired
     private Environment env;
     @Autowired
-    private DuplicatedPermitSearchRemote duplicatedPermitSearchRemote;
+    private DuplicatedPermitSearchRemoteTg duplicatedPermitSearchRemoteTg;
+    @Autowired
+    private DuplicatedPermitSearchRemoteWm duplicatedPermitSearchRemoteWm;
 
 
 
@@ -1235,18 +1239,33 @@ public class ServiceController {
         return 0;
     }
 
-    @RequestMapping("/DuplicatedPermitSearch/{month}")
-    public String DPSR(@PathVariable("month") int month) {
+    @RequestMapping("/DuplicatedPermitSearch/{month}/{channel}")
+    public String DPSR(@PathVariable("month") int month,@PathVariable("channel") String channel) {
         System.out.println("month=" + month);
+        System.out.println("channel=" + channel);
         JSONObject res = new JSONObject();
         String flag = "0";
-        duplicatedPermitSearchRemote.init(month);
-        try{
-            res =duplicatedPermitSearchRemote.dpsr();
-        }catch (Exception e){
-            res.put("err","1");
-            e.printStackTrace();
-            flag="1";
+
+        if("wm".equals(channel)) {
+            duplicatedPermitSearchRemoteWm.init(month);
+            try {
+                duplicatedPermitSearchRemoteWm.start();
+            } catch (Exception e) {
+                res.put("err", "1");
+                e.printStackTrace();
+                flag = "1";
+            }
+        }
+        else if("tg".equals(channel)){
+            duplicatedPermitSearchRemoteTg.init(month);
+            try {
+                res = duplicatedPermitSearchRemoteTg.dpsr();
+            } catch (Exception e) {
+                res.put("err", "1");
+                e.printStackTrace();
+                flag = "1";
+            }
+
         }
         return flag;
     }
