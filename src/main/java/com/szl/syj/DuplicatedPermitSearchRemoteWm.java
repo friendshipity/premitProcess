@@ -45,6 +45,8 @@ public class DuplicatedPermitSearchRemoteWm {
         this.tgResMap = tgResMap;
     }
 
+
+
     public Multimap<String, String> getWmResMap() {
         return wmResMap;
     }
